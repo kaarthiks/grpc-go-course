@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 
 	"github.com/kaarthiks/grpc-go-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
@@ -23,6 +24,8 @@ func main() {
 	doSum(c)
 
 	doPrimeFactorization(c)
+
+	doCalcAverage(c)
 }
 
 func doSum(c calculatorpb.CalculatorServiceClient) {
@@ -65,4 +68,32 @@ func doPrimeFactorization(c calculatorpb.CalculatorServiceClient) {
 
 		log.Printf("Prime Factor: %v", msg.GetPrimeFactor())
 	}
+}
+
+func doCalcAverage(c calculatorpb.CalculatorServiceClient) {
+	fmt.Println("Calculating average")
+
+	stream, err := c.CalcAverage(context.Background())
+	if err != nil {
+		log.Fatalf("Unable to setup stream")
+	}
+
+	// start sending numbers
+	for i := 0; i < 10; i++ {
+		req := &calculatorpb.CalcAverageRequest{
+			Number: uint32(rand.Intn(100)),
+		}
+		log.Printf("Sending number: %v", req)
+		err := stream.Send(req)
+		if err != nil {
+			log.Fatalf("Cannot send number to server: %v", err)
+		}
+	}
+
+	// now receive
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Unable to recv from server: %v", err)
+	}
+	log.Printf("Average: %v", res)
 }
