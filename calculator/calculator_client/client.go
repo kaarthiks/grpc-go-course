@@ -19,10 +19,10 @@ func main() {
 
 	c := calculatorpb.NewCalculatorServiceClient(cc)
 
-	do_sum(c)
+	doSum(c)
 }
 
-func do_sum(c calculatorpb.CalculatorServiceClient) {
+func doSum(c calculatorpb.CalculatorServiceClient) {
 	fmt.Println("Starting to do some sum")
 	req := &calculatorpb.SumRequest{
 		FirstNumber:  10,
