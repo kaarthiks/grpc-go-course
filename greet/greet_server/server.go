@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -24,6 +25,7 @@ func (*server) Greet(ctx context.Context, req *greetpb.GreetRequest) (*greetpb.G
 	return &resp, nil
 }
 
+// Input is the request and the stream
 func (*server) GreetManyTimes(req *greetpb.GreetManyTimesRequest, stream greetpb.GreetService_GreetManyTimesServer) error {
 	log.Println("Invoked Manytimesserver")
 	firstName := req.GetGreeting().GetFirstName()
@@ -37,6 +39,38 @@ func (*server) GreetManyTimes(req *greetpb.GreetManyTimesRequest, stream greetpb
 		stream.Send(resp)
 		time.Sleep(1 * time.Second)
 	}
+	return nil
+}
+
+// the input is the stream
+func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
+	// Do nothing for now
+	log.Println("In LongGreet now")
+	greeting := ""
+	for {
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			// received end of messages, send response back
+			err := stream.SendAndClose(&greetpb.LongGreetResponse{
+				Result: greeting,
+			})
+			if err != nil {
+				log.Fatalf("Got error sending response: %v", err)
+			}
+
+			// break from this loop
+			break
+		}
+		// if a real error is received
+		if err != nil {
+			log.Fatalf("Got error in recv: %v", err)
+		}
+
+		// got a message, print it out
+		log.Printf("Got message from client: %v", msg)
+		greeting = greeting + "Hello " + msg.GetGreeting().GetFirstName() + "!\n"
+	}
+
 	return nil
 }
 

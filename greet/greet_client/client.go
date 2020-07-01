@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strconv"
+	"time"
 
 	"github.com/kaarthiks/grpc-go-course/greet/greetpb"
 	"google.golang.org/grpc"
@@ -24,6 +26,38 @@ func main() {
 	doUnary(c)
 
 	doServerStreaming(c)
+
+	doClientStreaming(c)
+}
+
+func doClientStreaming(c greetpb.GreetServiceClient) {
+	fmt.Println("Starting clientstreaming")
+	// get a stream
+	stream, err := c.LongGreet(context.Background())
+
+	// send 10 messages
+	for i := 0; i < 10; i++ {
+		err := stream.Send(&greetpb.LongGreetRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Aswini " + strconv.Itoa(i),
+				LastName:  "K",
+			},
+		})
+
+		if err != nil {
+			log.Fatalf("Failed to send message %v: %v", i, err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	// now get the response
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatalf("Unable to recv message: %v", err)
+	}
+
+	// got the message
+	log.Printf("Got message: %v\n", res.GetResult())
 }
 
 func doServerStreaming(c greetpb.GreetServiceClient) {
