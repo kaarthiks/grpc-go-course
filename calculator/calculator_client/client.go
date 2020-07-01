@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"math/rand"
+	"time"
 
 	"github.com/kaarthiks/grpc-go-course/calculator/calculatorpb"
 	"google.golang.org/grpc"
@@ -21,13 +22,61 @@ func main() {
 
 	c := calculatorpb.NewCalculatorServiceClient(cc)
 
-	doSum(c)
+	// doSum(c)
 
-	doPrimeFactorization(c)
+	// doPrimeFactorization(c)
 
-	doCalcAverage(c)
+	// doCalcAverage(c)
+
+	doMax(c)
 }
 
+func doMax(c calculatorpb.CalculatorServiceClient) {
+	log.Println("Doing doMax")
+
+	stream, err := c.FindMax(context.Background())
+	if err != nil {
+		log.Fatalf("Error opening stream: %v", err)
+	}
+	waitc := make(chan struct{})
+	// send go routine
+	go func() {
+		numbers := []int32{4, 7, 2, 11, 2, 3, 13, 42, 3}
+		for _, num := range numbers {
+			log.Println("Sending number ", num)
+			senderr := stream.Send(&calculatorpb.FindMaxRequest{
+				Number: num,
+			})
+			if senderr != nil {
+				log.Fatalf("Error sending number: %v", senderr)
+			}
+			time.Sleep(1 * time.Second)
+		}
+		stream.CloseSend()
+	}()
+
+	// recv
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				log.Println("Finished all numbers")
+				break
+			}
+			if err != nil {
+				log.Fatalf("ERror receiving max: %v", err)
+				break
+			}
+			// got max number, print
+			max := res.GetMax()
+			log.Println("Max number is ", max)
+		}
+		close(waitc)
+	}()
+
+	// block on waitc
+	<-waitc
+}
 func doSum(c calculatorpb.CalculatorServiceClient) {
 	fmt.Println("Starting to do some sum")
 	req := &calculatorpb.SumRequest{

@@ -12,6 +12,36 @@ import (
 
 type server struct{}
 
+func (*server) FindMax(stream calculatorpb.CalculatorService_FindMaxServer) error {
+	log.Println("Called Find Max")
+
+	max := int32(0)
+
+	for {
+		req, err := stream.Recv()
+		if err == io.EOF {
+			log.Println("Got EOF")
+			return nil
+		}
+		if err != nil {
+			log.Fatalf("Error recv: %v", err)
+			return err
+		}
+		number := req.GetNumber()
+		log.Println("Got number ", number)
+		if number > max {
+			max = number
+			senderr := stream.Send(&calculatorpb.FindMaxResponse{
+				Max: max,
+			})
+			if senderr != nil {
+				log.Fatalf("ERror sending maximum: %v", senderr)
+				return senderr
+			}
+		}
+	}
+}
+
 func (*server) Sum(ctx context.Context, req *calculatorpb.SumRequest) (*calculatorpb.SumResponse, error) {
 	log.Printf("Called with %v\n", req)
 
